@@ -12,14 +12,18 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import algonquin.cst2335.wang0467.databinding.ActivityChatRoomBinding;
+import algonquin.cst2335.wang0467.databinding.ReceiveMessageBinding;
 import algonquin.cst2335.wang0467.databinding.SentMessageBinding;
 
 public class ChatRoom extends AppCompatActivity {
     ActivityChatRoomBinding binding;
     ChatRoomViewModel chatModel;
     private RecyclerView.Adapter myAdapter;
+//    ArrayList<ChatMessage> messages;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,14 +38,21 @@ public class ChatRoom extends AppCompatActivity {
             chatModel.messages.postValue(new ArrayList<>());
         }
 
+        SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd-MMM-yyyy hh-mm-ss a");
+
         binding.sendButton.setOnClickListener(click -> {
-            ArrayList<String> currentMessages = chatModel.messages.getValue();
-            if (currentMessages != null) {
-                currentMessages.add(binding.messageEditText.getText().toString());
-                chatModel.messages.postValue(currentMessages);
-                myAdapter.notifyItemInserted(currentMessages.size() - 1);
-                binding.messageEditText.setText("");
-            }
+
+            String message = binding.messageEditText.getText().toString();
+            String currentDateandTime = sdf.format(new Date());
+            ChatMessage newMessage = new ChatMessage(message, currentDateandTime, true);
+            addMessageToModel(newMessage);
+        });
+
+        binding.receiveButton.setOnClickListener(click -> {
+            String message = binding.messageEditText.getText().toString();
+            String currentDateandTime = sdf.format(new Date());
+            ChatMessage newMessage = new ChatMessage(message, currentDateandTime, false);
+            addMessageToModel(newMessage);
         });
 
         binding.recycleView.setLayoutManager(new LinearLayoutManager(this));
@@ -50,33 +61,45 @@ public class ChatRoom extends AppCompatActivity {
             @NonNull
             @Override
             public MyRowHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                SentMessageBinding binding = SentMessageBinding.inflate(getLayoutInflater());
-                return new MyRowHolder(binding.getRoot());
-            }
-
-            @Override
-            public void onBindViewHolder(@NonNull MyRowHolder holder, int position) {
-                ArrayList<String> currentMessages = chatModel.messages.getValue();
-                if (currentMessages != null) {
-                    String obj = currentMessages.get(position);
-                    holder.messageText.setText(obj);
-                    holder.timeText.setText("");
+                if(viewType == 0) {
+                    SentMessageBinding binding = SentMessageBinding.inflate(getLayoutInflater());
+                    return new MyRowHolder(binding.getRoot());
+                } else {
+                    ReceiveMessageBinding binding = ReceiveMessageBinding.inflate(getLayoutInflater());
+                    return new MyRowHolder(binding.getRoot());
                 }
             }
 
             @Override
+            public void onBindViewHolder(@NonNull MyRowHolder holder, int position) {
+                ChatMessage chatMessage = chatModel.messages.getValue().get(position);
+                holder.messageText.setText(chatMessage.getMessage());
+                holder.timeText.setText(chatMessage.getTimeSent());
+            }
+
+            @Override
             public int getItemCount() {
-                ArrayList<String> currentMessages = chatModel.messages.getValue();
-                return currentMessages != null ? currentMessages.size() : 0;
+                return chatModel.messages.getValue().size();
             }
 
 
             @Override
             public int getItemViewType(int position) {
-                return 0;
+                ChatMessage chatMessage = chatModel.messages.getValue().get(position);
+                return chatMessage.isSendButton() ? 0: 1;
             }
         });
 
+    }
+
+    private void addMessageToModel(ChatMessage newMessage) {
+        ArrayList<ChatMessage> currentMessages = chatModel.messages.getValue();
+        if (currentMessages != null) {
+            currentMessages.add(newMessage);
+            chatModel.messages.postValue(currentMessages);
+            myAdapter.notifyItemInserted(currentMessages.size() - 1);
+            binding.messageEditText.setText("");
+        }
     }
 }
 

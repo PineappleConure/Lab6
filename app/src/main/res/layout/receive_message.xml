@@ -5,29 +5,30 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <ImageView
+        android:id="@+id/receiveImage"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginEnd="0dp"
+        android:src="@drawable/receive_image"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <TextView
         android:id="@+id/messageText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="25dp"
         android:text="Message goes here"
-        app:layout_constraintStart_toEndOf="@id/sendImage"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintEnd_toStartOf="@+id/receiveImage"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/timeText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Time goes here"
-        app:layout_constraintStart_toEndOf="@+id/messageText"
-        app:layout_constraintTop_toBottomOf="@+id/messageText"
-        />
+        app:layout_constraintEnd_toStartOf="@+id/messageText"
+        app:layout_constraintTop_toBottomOf="@+id/messageText" />
 
-    <ImageView
-        android:id="@+id/sendImage"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:src="@drawable/send_image"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
