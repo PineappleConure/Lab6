@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.room.Room;
 
 import android.os.Bundle;
 import android.view.View;
@@ -14,6 +15,8 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import algonquin.cst2335.wang0467.databinding.ActivityChatRoomBinding;
 import algonquin.cst2335.wang0467.databinding.ReceiveMessageBinding;
@@ -23,8 +26,7 @@ public class ChatRoom extends AppCompatActivity {
     ActivityChatRoomBinding binding;
     ChatRoomViewModel chatModel;
     private RecyclerView.Adapter myAdapter;
-//    ArrayList<ChatMessage> messages;
-
+    private ChatMessageDAO mDAO;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -90,6 +92,24 @@ public class ChatRoom extends AppCompatActivity {
             }
         });
 
+        MessageDatabase db = Room.databaseBuilder(getApplicationContext(), MessageDatabase.class, "database-name").build();
+        mDAO = db.cmDAO();
+
+        ArrayList<ChatMessage> currentMessages = chatModel.messages.getValue();
+        if(currentMessages == null) {
+            ArrayList<ChatMessage> newMessagesList = new ArrayList<>();
+            chatModel.messages.setValue(newMessagesList);
+
+            Executor thread = Executors.newSingleThreadExecutor();
+            thread.execute(() -> {
+                newMessagesList.addAll(mDAO.getAllMessages()); // Once you get the data from the database
+
+                runOnUiThread(() -> {
+                    binding.recycleView.setAdapter(myAdapter); // You can then load the RecyclerView
+                });
+            });
+        }
+
     }
 
     private void addMessageToModel(ChatMessage newMessage) {
@@ -108,6 +128,7 @@ class MyRowHolder extends RecyclerView.ViewHolder {
     TextView timeText;
     public MyRowHolder(@NonNull View itemView) {
         super(itemView);
+
         messageText = itemView.findViewById(R.id.messageText);
         timeText = itemView.findViewById(R.id.timeText);
     }
