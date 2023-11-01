@@ -19,6 +19,9 @@ public class ChatMessage {
     @ColumnInfo(name = "id")
     public int id;
 
+    public ChatMessage () {
+
+    }
 
     public ChatMessage (String m, String t, boolean sent) {
         this.message = m;
@@ -37,4 +40,21 @@ public class ChatMessage {
     public boolean isSendButton() {
         return isSendButton;
     }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public void setTimeSent (String timeSent) {
+        this.timeSent = timeSent;
+    }
+
+    public void setSendButton (Boolean sendButton) {
+        this.isSendButton = sendButton;
+    }
+
+
+
 }
+
+
