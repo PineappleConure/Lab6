@@ -3,6 +3,7 @@ package algonquin.cst2335.wang0467;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProvider;
@@ -10,9 +11,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.room.Room;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import com.google.android.material.snackbar.Snackbar;
 
 import org.w3c.dom.Text;
@@ -39,6 +44,9 @@ public class ChatRoom extends AppCompatActivity {
 
         binding = ActivityChatRoomBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        Toolbar myToolbar = binding.myToolbar;
+        setSupportActionBar(myToolbar);
 
         chatModel = new ViewModelProvider(this).get(ChatRoomViewModel.class);
         if (chatModel.messages.getValue() == null) {
@@ -111,9 +119,55 @@ public class ChatRoom extends AppCompatActivity {
                         .commit();
             }
         });
-
-
     }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        getMenuInflater().inflate(R.menu.my_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.item_1) {
+            showDeleteMessageDialog();;
+            return true;
+        } else if (item.getItemId() == R.id.about) {
+            Toast.makeText(this, "Version 1.0, created by Linna Wang", Toast.LENGTH_LONG).show();
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void showDeleteMessageDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Do you want to delete this message?")
+                .setTitle("Confirm")
+                .setNegativeButton("No", null)
+                .setPositiveButton("Yes", (dialog, which) -> deleteSelectedMessage())
+                .show();
+    }
+
+    private void deleteSelectedMessage() {
+        Integer position = chatModel.selectedMessagePosition.getValue();
+        if (position != null) {
+            ChatMessage messageToDelete = chatModel.messages.getValue().get(position);
+
+            Executor thread = Executors.newSingleThreadExecutor();
+            thread.execute(() -> {
+                mDAO.deleteMessage(messageToDelete);
+                runOnUiThread(() -> {
+                    ArrayList<ChatMessage> currentMessages = chatModel.messages.getValue();
+                    currentMessages.remove(position.intValue());
+                    myAdapter.notifyItemRemoved(position);
+                    // Optionally, show a Snackbar for undo functionality here
+                });
+            });
+        }
+    }
+
 
     private void addMessageToModel(ChatMessage newMessage) {
         ArrayList<ChatMessage> currentMessages = chatModel.messages.getValue();
@@ -156,9 +210,12 @@ public class ChatRoom extends AppCompatActivity {
 //            });
             itemView.setOnClickListener(click -> {
                 int position = getAbsoluteAdapterPosition();
-                if (chatModel.messages.getValue() != null) {
-                    ChatMessage selected = chatModel.messages.getValue().get(position);
-                    chatModel.selectedMessage.postValue(selected);
+                if (position != RecyclerView.NO_POSITION) {
+                    chatModel.selectedMessagePosition.postValue(position);
+                    if (chatModel.messages.getValue() != null) {
+                        ChatMessage selected = chatModel.messages.getValue().get(position);
+                        chatModel.selectedMessage.postValue(selected);
+                    }
                 }
             });
 
