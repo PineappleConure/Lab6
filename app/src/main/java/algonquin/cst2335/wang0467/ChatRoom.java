@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -36,6 +37,7 @@ public class ChatRoom extends AppCompatActivity {
     ActivityChatRoomBinding binding;
     ChatRoomViewModel chatModel;
     private RecyclerView.Adapter<MyRowHolder> myAdapter;
+    public MutableLiveData<Integer> selectedMessagePosition = new MutableLiveData<>();
     private ChatMessageDAO mDAO;
 
     @Override
@@ -114,11 +116,12 @@ public class ChatRoom extends AppCompatActivity {
                 MessageDetailsFragment chatFragment = new MessageDetailsFragment(newMessageValue);
                 getSupportFragmentManager()
                         .beginTransaction()
-                        .replace(R.id.fragmentLocation, chatFragment) // Ensure this ID exists in your layout
+                        .replace(R.id.fragmentLocation, chatFragment)
                         .addToBackStack("")
                         .commit();
             }
         });
+
     }
 
     @Override
@@ -162,7 +165,6 @@ public class ChatRoom extends AppCompatActivity {
                     ArrayList<ChatMessage> currentMessages = chatModel.messages.getValue();
                     currentMessages.remove(position.intValue());
                     myAdapter.notifyItemRemoved(position);
-                    // Optionally, show a Snackbar for undo functionality here
                 });
             });
         }
@@ -170,14 +172,28 @@ public class ChatRoom extends AppCompatActivity {
 
 
     private void addMessageToModel(ChatMessage newMessage) {
-        ArrayList<ChatMessage> currentMessages = chatModel.messages.getValue();
-        if (currentMessages != null) {
-            currentMessages.add(newMessage);
-            chatModel.messages.postValue(currentMessages);
-            myAdapter.notifyItemInserted(currentMessages.size() - 1);
-            binding.messageEditText.setText("");
-        }
+        Executor thread = Executors.newSingleThreadExecutor();
+        thread.execute(() -> {
+            // Insert the message
+            mDAO.insertMessage(newMessage);
+
+            // Fetch the last inserted message
+            ChatMessage insertedMessage = mDAO.getLastInsertedMessage();
+
+            // Update UI on the main thread
+            runOnUiThread(() -> {
+                ArrayList<ChatMessage> currentMessages = chatModel.messages.getValue();
+                if (currentMessages != null) {
+                    currentMessages.add(insertedMessage);
+                    chatModel.messages.postValue(currentMessages);
+                    myAdapter.notifyItemInserted(currentMessages.size() - 1);
+                }
+            });
+        });
     }
+
+
+
 
     private void loadMessagesFromDatabase() {
         Executor thread = Executors.newSingleThreadExecutor();
@@ -199,42 +215,18 @@ public class ChatRoom extends AppCompatActivity {
             messageText = itemView.findViewById(R.id.messageText);
             timeText = itemView.findViewById(R.id.timeText);
 
-//            itemView.setOnClickListener(clk -> {
-//                int position = getAbsoluteAdapterPosition();
-//                AlertDialog.Builder builder = new AlertDialog.Builder(ChatRoom.this);
-//                builder.setMessage("Do you want to delete this message?")
-//                        .setTitle("Confirm")
-//                        .setNegativeButton("No", null)
-//                        .setPositiveButton("Yes", (dialog, cl) -> deleteMessage(position))
-//                        .show();
-//            });
             itemView.setOnClickListener(click -> {
                 int position = getAbsoluteAdapterPosition();
                 if (position != RecyclerView.NO_POSITION) {
-                    chatModel.selectedMessagePosition.postValue(position);
                     if (chatModel.messages.getValue() != null) {
                         ChatMessage selected = chatModel.messages.getValue().get(position);
                         chatModel.selectedMessage.postValue(selected);
+                        chatModel.selectedMessagePosition.postValue(position);
                     }
                 }
             });
 
         }
-
-//        private void deleteMessage(int position) {
-//            ArrayList<ChatMessage> currentMessages = chatModel.messages.getValue();
-//            ChatMessage messageToDelete = currentMessages.get(position);
-//
-//            Executor thread = Executors.newSingleThreadExecutor();
-//            thread.execute(() -> {
-//                mDAO.deleteMessage(messageToDelete);
-//                runOnUiThread(() -> {
-//                    currentMessages.remove(position);
-//                    myAdapter.notifyItemRemoved(position);
-//                    showUndoSnackbar(messageToDelete, position);
-//                });
-//            });
-//        }
 
         private void showUndoSnackbar(ChatMessage message, int position) {
             Snackbar.make(messageText, "Message deleted", Snackbar.LENGTH_LONG)
